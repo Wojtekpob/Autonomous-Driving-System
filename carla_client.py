@@ -4,19 +4,21 @@ import os
 import time
 
 class CarlaClient:
-    def __init__(self, file):
+    def __init__(self, config):
         """
         Initializes CARLA client based on configuration.
         
         :param config_path: Handle to YAML file configuration.
         """
-        self.config = file
+        self.config = config
 
         self.host = self.config['carla']['host']
         self.port = self.config['carla']['port']
         self.timeout = self.config['carla']['timeout']
         self.image_save_path = self.config['camera']['image_save_path']
         self.sampling_time = self.config['camera']['sampling_time']
+
+        self.autopilot = self.config['vehicle'].get('autopilot', False)  # Domyślnie False
 
         self.client = carla.Client(self.host, self.port)
         self.client.set_timeout(self.timeout)
@@ -34,7 +36,7 @@ class CarlaClient:
 
     def _initialize_simulation(self):
         """
-        Inicjalizuje pojazd i kamerę w symulatorze CARLA.
+        Initializes car and camera.
         """
         blueprint_library = self.world.get_blueprint_library()
 
@@ -43,6 +45,10 @@ class CarlaClient:
 
         self.vehicle = self.world.spawn_actor(vehicle_bp, spawn_point)
         print(f'Spawned vehicle: {self.vehicle.type_id}')
+
+        self.vehicle.set_autopilot(self.autopilot)
+        if self.autopilot:
+            print('Autopilot is enabled for the vehicle.')
 
         camera_bp = blueprint_library.find('sensor.camera.rgb')
         camera_bp.set_attribute('image_size_x', str(self.config['camera']['image_size_x']))
@@ -63,6 +69,7 @@ class CarlaClient:
         )
 
         self.camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to=self.vehicle)
+        print('Spawned camera')
 
         if not os.path.exists(self.image_save_path):
             os.makedirs(self.image_save_path)
