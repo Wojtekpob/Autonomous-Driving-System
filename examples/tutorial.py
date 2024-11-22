@@ -36,7 +36,7 @@ def main():
         # to the simulator. Here we'll assume the simulator is accepting
         # requests in the localhost at port 2000.
         client = carla.Client('localhost', 2000)
-        client.set_timeout(2.0)
+        client.set_timeout(10.0)
 
         # Once we have a client we can retrieve the world that is currently
         # running.
@@ -117,9 +117,9 @@ def main():
 
     finally:
 
-        print('destroying actors')
-        camera.destroy()
-        client.apply_batch([carla.command.DestroyActor(x) for x in actor_list])
+    #     print('destroying actors')
+    #     camera.destroy()
+    #     client.apply_batch([carla.command.DestroyActor(x) for x in actor_list])
         print('done.')
 
 

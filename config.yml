@@ -1,0 +1,22 @@
+carla:
+  host: 'localhost'
+  port: 2000
+  timeout: 10.0
+
+vehicle:
+  blueprint: 'vehicle.tesla.model3'
+
+camera:
+  image_size_x: 800
+  image_size_y: 600
+  fov: 90
+  image_save_path: 'output_images'
+  sampling_time: 0.1
+
+  transform:
+    x: 1.5
+    y: 0.0
+    z: 2.4
+    pitch: 0.0
+    yaw: 0.0
+    roll: 0.0
