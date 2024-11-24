@@ -18,10 +18,13 @@ class CarlaClient:
         self.image_save_path = self.config['camera']['image_save_path']
         self.sampling_time = self.config['camera']['sampling_time']
 
-        self.autopilot = self.config['vehicle'].get('autopilot', False)  # Domyślnie False
+        self.autopilot = self.config['vehicle'].get('autopilot', False)
 
         self.client = carla.Client(self.host, self.port)
         self.client.set_timeout(self.timeout)
+
+        self.map_name = self.config['carla'].get('map', 'Town01') 
+        self._load_map(self.map_name)
 
         self.world = self.client.get_world()
 
@@ -33,6 +36,19 @@ class CarlaClient:
         self._last_image_time = None
 
         self._initialize_simulation()
+
+    def _load_map(self, map_name):
+        """
+        Load the specified map in the CARLA simulator.
+        
+        :param map_name: Name of the map to load (e.g., 'Town01', 'Town02', etc.).
+        """
+        available_maps = self.client.get_available_maps()
+        if f"/Game/Carla/Maps/{map_name}" in available_maps:
+            print(f"Loading map: {map_name}")
+            self.client.load_world(map_name)
+        else:
+            raise ValueError(f"Map {map_name} is not available. Available maps: {available_maps}")
 
     def _initialize_simulation(self):
         """
