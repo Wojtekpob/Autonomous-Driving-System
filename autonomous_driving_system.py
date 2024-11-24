@@ -4,17 +4,18 @@ import threading
 import numpy as np
 import cv2
 from lane_detection import LaneDetectionModule
-
+from path_planning import PathPlanningModule
+from visualization import VisualizationModule
 from carla_client import CarlaClient
+
 
 class AutonomousDrivingSystem:
     def __init__(self, config_path):
         """
-        Initializes system.
+        Initializes the autonomous driving system.
 
-        :param config_path: Path to YAML configuration file.
+        :param config_path: Path to the YAML configuration file.
         """
-        
         with open(config_path, 'r') as file:
             self.config = yaml.safe_load(file)
 
@@ -24,44 +25,86 @@ class AutonomousDrivingSystem:
             arch=self.config['lane_detection']['arch'],
             dual_decoder=self.config['lane_detection']['dual_decoder']
         )
+        self.path_planning = PathPlanningModule(image_size=self.lane_detection.size)
+        
+        self.visualization = VisualizationModule(
+            image_size=self.lane_detection.size
+        )
 
-        self.display = self.config['lane_detection']['show_results']
+        self.display = self.config['visualization']['show_results']
         if self.display:
             self.display_thread = threading.Thread(target=self._display_loop)
             self.display_thread.daemon = True
             self.frame_to_display = None
+            self.frame_lock = threading.Lock()
+
+    def get_vehicle_state(self):
+        """
+        Retrieves the current state of the vehicle from CARLA.
+
+        :return: Dictionary containing position (x, y), orientation (psi), and speed (v) of the vehicle.
+        """
+        transform = self.client.vehicle.get_transform()
+        velocity = self.client.vehicle.get_velocity()
+
+        x = transform.location.x
+        y = transform.location.y
+        psi = np.deg2rad(transform.rotation.yaw)
+        v = np.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2)
+
+        return {'x': x, 'y': y, 'psi': psi, 'v': v}
 
     def camera_callback(self, image):
         """
-        Function invoked after every image from camera
+        Function called for each image received from the camera.
 
-        :param image: Image from camera.
+        :param image: Image from the camera.
         """
         image_data = np.frombuffer(image.raw_data, dtype=np.uint8)
-        image_data = image_data.reshape((image.height, image.width, 4)) 
-        image_data = image_data[:, :, :3]  
-        image_data = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)  
+        image_data = image_data.reshape((image.height, image.width, 4))
+        image_data = image_data[:, :, :3]
+        image_resized = cv2.resize(image_data, self.lane_detection.size)
 
-        pred_mask = self.lane_detection.predict(image_data)
+        pred_mask_resized = self.lane_detection.predict(image_resized)
+
+        pred_mask = cv2.resize(pred_mask_resized, (image_data.shape[1], image_data.shape[0]))
+
+        vehicle_state = self.get_vehicle_state()
+        coeffs, cte, epsi, trajectory_vehicle = self.path_planning.plan_path(pred_mask, vehicle_state)
+
+        if coeffs is not None and trajectory_vehicle is not None:
+            x_vehicle, y_vehicle = trajectory_vehicle
+
+            x_image, y_image = self.path_planning.transform_trajectory_to_image_space(x_vehicle, y_vehicle)
+            trajectory_image = (x_image, y_image)
+        else:
+            print("No sufficient data for path planning.")
+            trajectory_image = None
+
+        lane_lines = self.path_planning.last_detected_lane_lines
 
         if self.display:
-            combined_img = self.lane_detection.visualize_prediction(
+            combined_img = self.visualization.visualize(
                 image=image_data,
-                pred_mask=pred_mask,
-                show=False 
+                lane_mask=pred_mask,
+                trajectory=trajectory_image,
+                lane_lines=lane_lines,
+                show=False
             )
-            self.frame_to_display = combined_img
+            with self.frame_lock:
+                self.frame_to_display = combined_img
 
-        # @TODO implement mpc control
-
+        # TODO: Implement MPC control
 
     def _display_loop(self):
         """
-        Thread responsible for showing prediction result.
+        Thread responsible for displaying the visualization.
         """
         while True:
-            if self.frame_to_display is not None:
-                cv2.imshow('Prediction', self.frame_to_display)
+            with self.frame_lock:
+                frame = self.frame_to_display
+            if frame is not None:
+                cv2.imshow('Autonomous Driving System', frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
             else:
@@ -70,7 +113,7 @@ class AutonomousDrivingSystem:
 
     def run(self):
         """
-        Starts system.
+        Starts the autonomous driving system.
         """
         self.client.set_camera_callback(self.camera_callback)
 
@@ -86,6 +129,6 @@ class AutonomousDrivingSystem:
             self.client.stop()
 
 
-if __name__=="__main__":
-    drivingSystem = AutonomousDrivingSystem("config.yml")
-    drivingSystem.run()
+if __name__ == "__main__":
+    driving_system = AutonomousDrivingSystem("config.yml")
+    driving_system.run()

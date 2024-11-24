@@ -24,7 +24,9 @@ camera:
     roll: 0.0
 
 lane_detection:
-  ckpt_path: 'C:\Users\wojte\Lane_Detection-An_Instance_Segmentation_Approach\checkpoints\ckpt_2024-11-21_22-03-46_epoch-1740.pth'
+  ckpt_path: 'C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\checkpoints\\ckpt_2024-11-21_22-03-46_epoch-1740.pth'
   arch: 'enet'
   dual_decoder: True
-  show_results: True #whether to visualise predictions
+
+visualization:
+  show_results: True

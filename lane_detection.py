@@ -5,16 +5,15 @@ import numpy as np
 from model import lanenet
 from model.utils import cluster_embed, fit_lanes, sample_from_curve, generate_json_entry, get_color
 from torchvision import transforms
-
 class LaneDetectionModule:
     def __init__(self, ckpt_path, arch='enet', dual_decoder=False, device=None):
         """
-        Initializes lane detection module
+        Initializes the Lane Detection Module.
 
-        :param ckpt_path: Path to model.
-        :param arch: Network architecture.
-        :param dual_decoder: Whether to use dual decoder.
-        :param device: 'cuda:0' or 'cpu'.
+        :param ckpt_path: Path to the model checkpoint (.pth file).
+        :param arch: Architecture of the network (default 'enet').
+        :param dual_decoder: Whether to use dual decoder architecture.
+        :param device: Device to run the model on ('cuda' or 'cpu').
         """
         self.ckpt_path = ckpt_path
         self.arch = arch
@@ -26,7 +25,7 @@ class LaneDetectionModule:
 
     def _load_model(self):
         """
-        Loads model from checkpoint file.
+        Loads the neural network model from the checkpoint file.
         """
         if 'fcn' in self.arch.lower():
             arch_name = 'lanenet.LaneNet_FCN_Res'
@@ -35,7 +34,7 @@ class LaneDetectionModule:
         elif 'icnet' in self.arch.lower():
             arch_name = 'lanenet.LaneNet_ICNet'
         else:
-            raise ValueError(f"Unkown architecture: {self.arch}")
+            raise ValueError(f"Unknown architecture: {self.arch}")
 
         arch_name += '_1E2D' if self.dual_decoder else '_1E1D'
 
@@ -49,10 +48,10 @@ class LaneDetectionModule:
 
     def preprocess_image(self, image):
         """
-        Preprocesses input image.
+        Preprocesses the input image for the neural network.
 
-        :param image: Image in numpy array format (BGR).
-        :return: Image tensor, that is ready for network.
+        :param image: Input image as a NumPy array (BGR format).
+        :return: Preprocessed image tensor.
         """
         image = cv2.resize(image, self.size, interpolation=cv2.INTER_LINEAR)
         image = image.astype(np.float32)
@@ -63,10 +62,10 @@ class LaneDetectionModule:
 
     def predict(self, image):
         """
-        Predicts on single image.
+        Performs lane detection on the input image.
 
-        :param image: Image in numpy array format (BGR).
-        :return: Prediction result (eg. segmentation mask).
+        :param image: Input image as a NumPy array (BGR format).
+        :return: Predicted lane mask as a NumPy array.
         """
         input_tensor = self.preprocess_image(image)
         input_batch = input_tensor.unsqueeze(0).to(self.device)
@@ -76,31 +75,5 @@ class LaneDetectionModule:
             pred_bin_batch = torch.argmax(logit, dim=1, keepdim=True)
 
         pred_mask = pred_bin_batch[0].cpu().numpy().transpose(1, 2, 0)
-        pred_mask = pred_mask.astype(np.uint8) * 255  
-        
+        pred_mask = pred_mask.astype(np.uint8) * 255
         return pred_mask
-
-    def visualize_prediction(self, image, pred_mask, show=False, save_path=None):
-        """
-        Visualizes prediction result on input image.
-
-        :param image: Input image in numpy array format (BGR).
-        :param pred_mask: Prediction mask (numpy array).
-        :param show: Whether to show result on screen.
-        :param save_path: Path to save result (if None, then doesn't save).
-        """
-        input_rgb = cv2.resize(image, self.size, interpolation=cv2.INTER_LINEAR)
-        input_rgb = input_rgb.astype(np.uint8)
-
-        pred_mask_rgb = cv2.cvtColor(pred_mask, cv2.COLOR_GRAY2BGR)
-
-        combined_img = cv2.addWeighted(input_rgb, 1.0, pred_mask_rgb, 0.5, 0)
-
-        if show:
-            cv2.imshow('Prediction', combined_img)
-            cv2.waitKey(1) 
-
-        if save_path is not None:
-            cv2.imwrite(save_path, combined_img)
-
-        return combined_img

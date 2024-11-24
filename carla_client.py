@@ -3,12 +3,13 @@ import yaml
 import os
 import time
 
+
 class CarlaClient:
     def __init__(self, config):
         """
-        Initializes CARLA client based on configuration.
-        
-        :param config_path: Handle to YAML file configuration.
+        Initializes the CARLA client based on configuration.
+
+        :param config: Configuration dictionary.
         """
         self.config = config
 
@@ -23,7 +24,7 @@ class CarlaClient:
         self.client = carla.Client(self.host, self.port)
         self.client.set_timeout(self.timeout)
 
-        self.map_name = self.config['carla'].get('map', 'Town01') 
+        self.map_name = self.config['carla'].get('map', 'Town01')
         self._load_map(self.map_name)
 
         self.world = self.client.get_world()
@@ -39,8 +40,8 @@ class CarlaClient:
 
     def _load_map(self, map_name):
         """
-        Load the specified map in the CARLA simulator.
-        
+        Loads the specified map in the CARLA simulator.
+
         :param map_name: Name of the map to load (e.g., 'Town01', 'Town02', etc.).
         """
         available_maps = self.client.get_available_maps()
@@ -52,7 +53,7 @@ class CarlaClient:
 
     def _initialize_simulation(self):
         """
-        Initializes car and camera.
+        Initializes the vehicle and camera in the simulation.
         """
         blueprint_library = self.world.get_blueprint_library()
 
@@ -92,18 +93,18 @@ class CarlaClient:
 
     def set_camera_callback(self, callback):
         """
-        Sets camera callback function.
+        Sets the camera callback function.
 
-        :param callback: Function invoked after every image from camera.
+        :param callback: Function invoked after every image from the camera.
         """
         self.camera_callback = callback
         self.camera.listen(self._camera_listener)
 
     def _camera_listener(self, image):
         """
-        Function invoked after every image from camera.
-        
-        :param image: Image from camera.
+        Function invoked after every image from the camera.
+
+        :param image: Image from the camera.
         """
         current_time = time.time()
         if self._last_image_time is not None:
@@ -133,6 +134,6 @@ class CarlaClient:
 
     def __del__(self):
         """
-        Destructor - Making sure if resources are freed.
+        Destructor - ensures resources are freed.
         """
         self.stop()
