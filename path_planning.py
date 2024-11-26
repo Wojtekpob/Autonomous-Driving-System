@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-
 class PathPlanningModule:
     def __init__(self, order=3, image_size=(512, 288)):
         """
@@ -10,9 +9,8 @@ class PathPlanningModule:
         :param image_size: Image size (width, height).
         """
         self.order = order
-        self.image_size = image_size 
+        self.image_size = image_size
         self.last_detected_lane_lines = None
-
         self.xm_per_pix = 3.7 / self.image_size[0]
         self.ym_per_pix = 30.0 / self.image_size[1]
 
@@ -55,7 +53,7 @@ class PathPlanningModule:
         :param lane_lines: List of lane lines with their properties.
         :return: List of selected lane lines.
         """
-        min_length = 50 
+        min_length = 50
         valid_lane_lines = [line for line in lane_lines if line['length'] >= min_length]
 
         if not valid_lane_lines:
@@ -87,7 +85,7 @@ class PathPlanningModule:
         if len(all_x) == 0:
             return None
 
-        coeffs = np.polyfit(all_y, all_x, self.order) 
+        coeffs = np.polyfit(all_y, all_x, self.order)
 
         return coeffs
 
@@ -99,8 +97,8 @@ class PathPlanningModule:
         :param y_vals: Y coordinates in image space.
         :return: X and Y coordinates in vehicle coordinates.
         """
-        y_vehicle = (self.image_size[1] - y_vals) * self.ym_per_pix
-        x_vehicle = (x_vals - self.image_size[0] / 2) * self.xm_per_pix 
+        y_vehicle = (y_vals - self.image_size[1]) * -self.ym_per_pix
+        x_vehicle = (x_vals - self.image_size[0] / 2) * self.xm_per_pix
 
         return x_vehicle, y_vehicle
 
@@ -124,8 +122,8 @@ class PathPlanningModule:
         :param coeffs: Polynomial coefficients in vehicle coordinates.
         :return: Cross-track error (cte) and orientation error (epsi).
         """
-        cte = np.polyval(coeffs, 0) 
-        epsi = -np.arctan(coeffs[1]) 
+        cte = np.polyval(coeffs, 0)
+        epsi = -np.arctan(coeffs[1])
 
         return cte, epsi
 
@@ -155,7 +153,7 @@ class PathPlanningModule:
             print("Unable to fit polynomial to lane lines.")
             return None, None, None, None
 
-        y_vals = np.linspace(0, self.image_size[1] - 1, num=self.image_size[1])
+        y_vals = np.linspace(self.image_size[1] - 1, 0, num=self.image_size[1])
 
         x_vals = np.polyval(coeffs_image, y_vals)
 

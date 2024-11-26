@@ -37,7 +37,7 @@ class VisualizationModule:
             x_vals = np.clip(x_vals, 0, image.shape[1] - 1).astype(np.int32)
             y_vals = np.clip(y_vals, 0, image.shape[0] - 1).astype(np.int32)
             for x, y in zip(x_vals, y_vals):
-                cv2.circle(combined_img, (x, y), radius=2, color=(0, 0, 255), thickness=-1)  # Red dots
+                cv2.circle(combined_img, (x, y), radius=2, color=(0, 0, 255), thickness=-1)
 
         if show:
             cv2.imshow('Visualization', combined_img)

@@ -125,7 +125,7 @@ def cluster_embed(embeddings, preds_bin, band_width):
     preds_inst = torch.zeros_like(preds_bin)
     for idx, (embedding, bin_pred) in enumerate(zip(embeddings, preds_bin)):
         # print(embedding.size(), bin_pred.size())
-        embedding_fg = torch.transpose(torch.masked_select(embedding, bin_pred.byte()).view(c, -1), 0, 1)
+        embedding_fg = torch.transpose(torch.masked_select(embedding, bin_pred.bool()).view(c, -1), 0, 1)
         # print(embedding_fg.size())
 
         # embedding_expand = embedding.view(embedding.shape[0],
@@ -134,7 +134,7 @@ def cluster_embed(embeddings, preds_bin, band_width):
         # print(embedding_expand.shape)
         clustering = MeanShift(bandwidth=band_width, bin_seeding=True, min_bin_freq=100).fit(embedding_fg.cpu().detach().numpy())
 
-        preds_inst[idx][bin_pred.byte()] = torch.from_numpy(clustering.labels_).cuda() + 1
+        preds_inst[idx][bin_pred.bool()] = torch.from_numpy(clustering.labels_).cuda() + 1
 
         # labels_color = get_color(clustering.labels_)
         # preds_inst[idx][bin_pred.byte()] = torch.from_numpy(labels_color).cuda() + 1

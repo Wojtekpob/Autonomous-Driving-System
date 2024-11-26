@@ -3,8 +3,9 @@ import torch
 import cv2
 import numpy as np
 from model import lanenet
-from model.utils import cluster_embed, fit_lanes, sample_from_curve, generate_json_entry, get_color
+from model.utils import cluster_embed, fit_lanes, sample_from_curve, get_color
 from torchvision import transforms
+
 class LaneDetectionModule:
     def __init__(self, ckpt_path, arch='enet', dual_decoder=False, device=None):
         """
@@ -69,10 +70,24 @@ class LaneDetectionModule:
         """
         input_tensor = self.preprocess_image(image)
         input_batch = input_tensor.unsqueeze(0).to(self.device)
+        h, w = self.size[1], self.size[0]  
 
         with torch.no_grad():
             embeddings, logit = self.net(input_batch)
             pred_bin_batch = torch.argmax(logit, dim=1, keepdim=True)
+            pred_insts = cluster_embed(embeddings, pred_bin_batch, band_width=0.5)
+
+        pred_inst = pred_insts[0] 
+
+        
+        curves_param = fit_lanes(pred_inst)
+        
+        y_start = np.round(160 * h / 720.)
+        y_stop = np.round(710 * h / 720.)
+        y_num = 56
+        y_sample = np.linspace(y_start, y_stop, y_num, dtype=np.int16)
+
+        curves_pts_pred = sample_from_curve(curves_param, pred_inst, y_sample)
 
         pred_mask = pred_bin_batch[0].cpu().numpy().transpose(1, 2, 0)
         pred_mask = pred_mask.astype(np.uint8) * 255

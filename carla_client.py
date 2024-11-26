@@ -59,9 +59,11 @@ class CarlaClient:
 
         vehicle_bp = blueprint_library.find(self.config['vehicle']['blueprint'])
         spawn_point = self.world.get_map().get_spawn_points()[0]
+        self.set_weather_for_lane_visibility()
 
         self.vehicle = self.world.spawn_actor(vehicle_bp, spawn_point)
         print(f'Spawned vehicle: {self.vehicle.type_id}')
+        self.move_vehicle_left(1)
 
         self.vehicle.set_autopilot(self.autopilot)
         if self.autopilot:
@@ -91,6 +93,24 @@ class CarlaClient:
         if not os.path.exists(self.image_save_path):
             os.makedirs(self.image_save_path)
 
+    def set_weather_for_lane_visibility(self):
+        """
+        Sets the weather in CARLA to ensure good lane visibility.
+        """
+        weather = carla.WeatherParameters(
+            cloudiness=self.config['carla']['weather']['cloudiness'],        
+            precipitation=self.config['carla']['weather']['precipitation'],       
+            precipitation_deposits=self.config['carla']['weather']['precipitation_deposits'],
+            wind_intensity=self.config['carla']['weather']['wind_intensity'],    
+            sun_azimuth_angle=self.config['carla']['weather']['sun_azimuth_angle'], 
+            sun_altitude_angle=self.config['carla']['weather']['sun_altitude_angle'], 
+            fog_density=self.config['carla']['weather']['fog_density'],        
+            fog_distance=self.config['carla']['weather']['fog_distance'],   
+            fog_falloff=self.config['carla']['weather']['fog_falloff']        
+        )
+        self.world.set_weather(weather)
+        print("Weather set.")
+
     def set_camera_callback(self, callback):
         """
         Sets the camera callback function.
@@ -112,11 +132,33 @@ class CarlaClient:
                 return
         self._last_image_time = current_time
 
-        image_filename = os.path.join(self.image_save_path, f'{image.frame:06d}.png')
+        image_filename = os.path.join(self.image_save_path, f'{image.frame:06d}.jpg')
         image.save_to_disk(image_filename)
 
         if self.camera_callback is not None:
             self.camera_callback(image)
+
+    def move_vehicle_left(self, distance):
+        """
+        Moves the vehicle a specified distance to the left.
+
+        :param distance: Distance to move the vehicle in meters (negative for left).
+        """
+        if self.vehicle is not None:
+            current_transform = self.vehicle.get_transform()
+            current_location = current_transform.location
+
+            current_location.y -= distance
+
+            new_transform = carla.Transform(
+                location=current_location,
+                rotation=current_transform.rotation
+            )
+            self.vehicle.set_transform(new_transform)
+
+            print(f'Vehicle moved {distance} meters to the left.')
+        else:
+            print('Vehicle is not spawned yet.')
 
     def stop(self):
         """
