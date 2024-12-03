@@ -5,6 +5,7 @@ import numpy as np
 from model import lanenet
 from model.utils import cluster_embed, fit_lanes, sample_from_curve, get_color
 from torchvision import transforms
+import warnings
 
 class LaneDetectionModule:
     def __init__(self, ckpt_path, arch='enet', dual_decoder=False, device=None):
@@ -66,29 +67,72 @@ class LaneDetectionModule:
         Performs lane detection on the input image.
 
         :param image: Input image as a NumPy array (BGR format).
-        :return: Predicted lane mask as a NumPy array.
+        :return: Tuple of (predicted lane mask, selected polynomial coefficients).
         """
         input_tensor = self.preprocess_image(image)
         input_batch = input_tensor.unsqueeze(0).to(self.device)
-        h, w = self.size[1], self.size[0]  
+        h, w = self.size[1], self.size[0]
 
         with torch.no_grad():
             embeddings, logit = self.net(input_batch)
             pred_bin_batch = torch.argmax(logit, dim=1, keepdim=True)
-            pred_insts = cluster_embed(embeddings, pred_bin_batch, band_width=0.5)
 
-        pred_inst = pred_insts[0] 
+        pred_bin = pred_bin_batch[0, 0].cpu().numpy().astype(np.uint8)
 
-        
-        curves_param = fit_lanes(pred_inst)
-        
-        y_start = np.round(160 * h / 720.)
-        y_stop = np.round(710 * h / 720.)
-        y_num = 56
-        y_sample = np.linspace(y_start, y_stop, y_num, dtype=np.int16)
+        num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pred_bin, connectivity=8)
 
-        curves_pts_pred = sample_from_curve(curves_param, pred_inst, y_sample)
+        center_x = w / 2
+        min_area = 500  
+        lanes_info = []
 
-        pred_mask = pred_bin_batch[0].cpu().numpy().transpose(1, 2, 0)
-        pred_mask = pred_mask.astype(np.uint8) * 255
-        return pred_mask
+        for label in range(1, num_labels): 
+            mask = labels == label
+            area = stats[label, cv2.CC_STAT_AREA]
+            if area < min_area:
+                continue
+
+            y_coords, x_coords = np.where(mask)
+
+            max_y = int(h * 0.9) 
+            valid_indices = y_coords >= int(h * 0.5) 
+            y_coords = y_coords[valid_indices]
+            x_coords = x_coords[valid_indices]
+
+            if len(y_coords) < 2:
+                continue
+
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', np.RankWarning)
+                try:
+                    coeffs = np.polyfit(y_coords, x_coords, deg=2)
+                except np.RankWarning:
+                    continue
+
+            y_bottom = h - 1
+            x_bottom = np.polyval(coeffs, y_bottom)
+            distance_from_center = x_bottom - center_x
+
+            lanes_info.append((distance_from_center, coeffs))
+
+        left_lanes = [info for info in lanes_info if info[0] < 0]
+        right_lanes = [info for info in lanes_info if info[0] >= 0]
+
+        if left_lanes:
+            left_lane = max(left_lanes, key=lambda x: x[0])  # Closest to center
+        else:
+            left_lane = None
+
+        if right_lanes:
+            right_lane = min(right_lanes, key=lambda x: x[0])  # Closest to center
+        else:
+            right_lane = None
+
+        selected_params = []
+        if left_lane:
+            selected_params.append(left_lane[1])
+        if right_lane:
+            selected_params.append(right_lane[1])
+
+        pred_mask = pred_bin[:, :, np.newaxis] * 255
+
+        return pred_mask, selected_params

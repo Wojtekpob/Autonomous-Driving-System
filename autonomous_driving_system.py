@@ -57,7 +57,6 @@ class AutonomousDrivingSystem:
     def camera_callback(self, image):
         """
         Function called for each image received from the camera.
-
         :param image: Image from the camera.
         """
         image_data = np.frombuffer(image.raw_data, dtype=np.uint8)
@@ -65,36 +64,34 @@ class AutonomousDrivingSystem:
         image_data = image_data[:, :, :3]
         image_resized = cv2.resize(image_data, self.lane_detection.size)
 
-        pred_mask_resized = self.lane_detection.predict(image_resized)
+        pred_mask_resized, selected_params = self.lane_detection.predict(image_resized)
 
         pred_mask = cv2.resize(pred_mask_resized, (image_data.shape[1], image_data.shape[0]))
 
         vehicle_state = self.get_vehicle_state()
-        coeffs, cte, epsi, trajectory_vehicle = self.path_planning.plan_path(pred_mask, vehicle_state)
 
-        if coeffs is not None and trajectory_vehicle is not None:
-            x_vehicle, y_vehicle = trajectory_vehicle
+        h_small = self.lane_detection.size[1]
+        max_y = h_small - 1 
+        min_y = int(h_small * 0.5)
+        y_vals_small = np.linspace(max_y, min_y, num=100)
 
-            x_image, y_image = self.path_planning.transform_trajectory_to_image_space(x_vehicle, y_vehicle)
-            trajectory_image = (x_image, y_image)
-        else:
+        trajectory_coeffs, cte, epsi = self.path_planning.plan_path(selected_params, vehicle_state)
+
+        if trajectory_coeffs is None:
             print("No sufficient data for path planning.")
-            trajectory_image = None
-
-        lane_lines = self.path_planning.last_detected_lane_lines
+            trajectory_coeffs = None
 
         if self.display:
             combined_img = self.visualization.visualize(
                 image=image_data,
                 lane_mask=pred_mask,
-                trajectory=trajectory_image,
-                lane_lines=lane_lines,
+                trajectory_coeffs=trajectory_coeffs,
+                lane_lines=selected_params,
+                y_vals_small=y_vals_small,
                 show=False
             )
             with self.frame_lock:
                 self.frame_to_display = combined_img
-
-        # TODO: Implement MPC control
 
     def _display_loop(self):
         """
