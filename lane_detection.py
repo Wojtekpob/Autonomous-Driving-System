@@ -79,10 +79,36 @@ class LaneDetectionModule:
 
         pred_bin = pred_bin_batch[0, 0].cpu().numpy().astype(np.uint8)
 
+        refined_pred_bin, selected_params = self._refine_and_select_lanes(pred_bin, w, h)
+
+        pred_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        for idx, coeffs in enumerate(selected_params):
+            y_vals = np.linspace(0, h - 1, num=h)
+            x_vals = np.polyval(coeffs, y_vals)
+            pts = np.vstack((x_vals, y_vals)).T
+            pts = pts[(pts[:, 0] >= 0) & (pts[:, 0] < w)]
+            pts = pts.astype(np.int32)
+            pts = pts.reshape((-1, 1, 2))
+            color = get_color(idx)
+            cv2.polylines(pred_mask, [pts], False, color, thickness=2)
+
+        return pred_mask, selected_params
+
+    def _refine_and_select_lanes(self, pred_bin, w, h):
+        """
+        Refines the binary prediction mask by selecting the left and right lanes
+        closest to the middle and setting the rest as background.
+
+        :param pred_bin: Binary prediction mask as a NumPy array.
+        :param w: Width of the image.
+        :param h: Height of the image.
+        :return: Refined binary mask and list of polynomial coefficients for the selected lanes.
+        """
+        center_x = w / 2
+
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pred_bin, connectivity=8)
 
-        center_x = w / 2
-        min_area = 500  
+        min_area = 500 
         lanes_info = []
 
         for label in range(1, num_labels): 
@@ -92,11 +118,6 @@ class LaneDetectionModule:
                 continue
 
             y_coords, x_coords = np.where(mask)
-
-            max_y = int(h * 0.9) 
-            valid_indices = y_coords >= int(h * 0.5) 
-            y_coords = y_coords[valid_indices]
-            x_coords = x_coords[valid_indices]
 
             if len(y_coords) < 2:
                 continue
@@ -112,27 +133,32 @@ class LaneDetectionModule:
             x_bottom = np.polyval(coeffs, y_bottom)
             distance_from_center = x_bottom - center_x
 
-            lanes_info.append((distance_from_center, coeffs))
+            lanes_info.append((distance_from_center, label, coeffs))
 
         left_lanes = [info for info in lanes_info if info[0] < 0]
         right_lanes = [info for info in lanes_info if info[0] >= 0]
 
         if left_lanes:
-            left_lane = max(left_lanes, key=lambda x: x[0])  # Closest to center
+            left_lane = max(left_lanes, key=lambda x: x[0])
         else:
             left_lane = None
 
         if right_lanes:
-            right_lane = min(right_lanes, key=lambda x: x[0])  # Closest to center
+            right_lane = min(right_lanes, key=lambda x: x[0])
         else:
             right_lane = None
 
+        refined_pred_bin = np.zeros_like(pred_bin)
         selected_params = []
+
         if left_lane:
-            selected_params.append(left_lane[1])
+            label = left_lane[1]
+            refined_pred_bin[labels == label] = 1
+            selected_params.append(left_lane[2])
+
         if right_lane:
-            selected_params.append(right_lane[1])
+            label = right_lane[1]
+            refined_pred_bin[labels == label] = 1
+            selected_params.append(right_lane[2])
 
-        pred_mask = pred_bin[:, :, np.newaxis] * 255
-
-        return pred_mask, selected_params
+        return refined_pred_bin, selected_params
