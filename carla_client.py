@@ -2,6 +2,7 @@ import carla
 import yaml
 import os
 import time
+import numpy as np
 
 
 class CarlaClient:
@@ -58,12 +59,12 @@ class CarlaClient:
         blueprint_library = self.world.get_blueprint_library()
 
         vehicle_bp = blueprint_library.find(self.config['vehicle']['blueprint'])
-        spawn_point = self.world.get_map().get_spawn_points()[0]
+        spawn_point = self.world.get_map().get_spawn_points()[1]
         self.set_weather_for_lane_visibility()
 
         self.vehicle = self.world.spawn_actor(vehicle_bp, spawn_point)
         print(f'Spawned vehicle: {self.vehicle.type_id}')
-        self.move_vehicle_left(1)
+        # self.move_vehicle_left(1)
 
         self.vehicle.set_autopilot(self.autopilot)
         if self.autopilot:
@@ -92,6 +93,7 @@ class CarlaClient:
 
         if not os.path.exists(self.image_save_path):
             os.makedirs(self.image_save_path)
+        self.apply_control(0.0, 0.2)
 
     def set_weather_for_lane_visibility(self):
         """
@@ -110,6 +112,19 @@ class CarlaClient:
         )
         self.world.set_weather(weather)
         print("Weather set.")
+
+    def apply_control(self, steer, throttle):
+        """
+        Applies control commands to the vehicle.
+
+        :param steer: Steering angle in radians.
+        :param throttle: Throttle value between -1.0 and 1.0.
+        """
+        control = carla.VehicleControl()
+        control.steer = np.clip(steer / 0.436332, -1.0, 1.0)
+        control.throttle = np.clip(throttle, 0.0, 1.0)
+        control.brake = 0.0 if throttle >= 0 else -throttle
+        self.vehicle.apply_control(control)
 
     def set_camera_callback(self, callback):
         """

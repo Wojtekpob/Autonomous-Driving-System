@@ -7,7 +7,7 @@ from lane_detection import LaneDetectionModule
 from path_planning import PathPlanningModule
 from visualization import VisualizationModule
 from carla_client import CarlaClient
-
+from mpc_controller import MPCController
 
 class AutonomousDrivingSystem:
     def __init__(self, config_path):
@@ -26,6 +26,7 @@ class AutonomousDrivingSystem:
             dual_decoder=self.config['lane_detection']['dual_decoder']
         )
         self.path_planning = PathPlanningModule(image_size=self.lane_detection.size)
+        self.mpc_controller = MPCController()
         
         self.visualization = VisualizationModule(
             image_size=self.lane_detection.size
@@ -57,6 +58,7 @@ class AutonomousDrivingSystem:
     def camera_callback(self, image):
         """
         Function called for each image received from the camera.
+
         :param image: Image from the camera.
         """
         image_data = np.frombuffer(image.raw_data, dtype=np.uint8)
@@ -70,16 +72,17 @@ class AutonomousDrivingSystem:
 
         vehicle_state = self.get_vehicle_state()
 
-        h_small = self.lane_detection.size[1]
-        max_y = h_small - 1 
-        min_y = int(h_small * 0.5)
-        y_vals_small = np.linspace(max_y, min_y, num=100)
-
         trajectory_coeffs, cte, epsi = self.path_planning.plan_path(selected_params, vehicle_state)
-
+        print(cte, epsi)
         if trajectory_coeffs is None:
             print("No sufficient data for path planning.")
             trajectory_coeffs = None
+        else:
+            state = np.array([0, 0, 0, vehicle_state['v'], cte, epsi])
+
+            delta_opt, a_opt = self.mpc_controller.solve(state, trajectory_coeffs)
+            print(delta_opt, a_opt)
+            self.client.apply_control(delta_opt, a_opt)
 
         if self.display:
             combined_img = self.visualization.visualize(
@@ -87,7 +90,6 @@ class AutonomousDrivingSystem:
                 lane_mask=pred_mask,
                 trajectory_coeffs=trajectory_coeffs,
                 lane_lines=selected_params,
-                y_vals_small=y_vals_small,
                 show=False
             )
             with self.frame_lock:
