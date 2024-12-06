@@ -82,7 +82,7 @@ class AutonomousDrivingSystem:
 
             delta_opt, a_opt = self.mpc_controller.solve(state, trajectory_coeffs)
             print(delta_opt, a_opt)
-            self.client.apply_control(delta_opt, a_opt)
+            # self.client.apply_control(delta_opt, a_opt)
 
         if self.display:
             combined_img = self.visualization.visualize(

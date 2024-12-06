@@ -60,11 +60,10 @@ class CarlaClient:
 
         vehicle_bp = blueprint_library.find(self.config['vehicle']['blueprint'])
         spawn_point = self.world.get_map().get_spawn_points()[1]
-        self.set_weather_for_lane_visibility()
+        # self.set_weather_for_lane_visibility()
 
         self.vehicle = self.world.spawn_actor(vehicle_bp, spawn_point)
         print(f'Spawned vehicle: {self.vehicle.type_id}')
-        # self.move_vehicle_left(1)
 
         self.vehicle.set_autopilot(self.autopilot)
         if self.autopilot:

@@ -3,20 +3,30 @@ carla:
   port: 2000
   timeout: 10.0
   map: 'Town04'
+  # weather:
+  #   cloudiness: 80.0   
+  #   precipitation: 0.0    
+  #   precipitation_deposits: 0.0  
+  #   wind_intensity: 0.0      
+  #   sun_azimuth_angle: 45.0    
+  #   sun_altitude_angle: 20.0   
+  #   fog_density: 0.0        
+  #   fog_distance: 1000.0       
+  #   fog_falloff: 0.0       
   weather:
-    cloudiness: 80.0   
-    precipitation: 0.0    
-    precipitation_deposits: 0.0  
-    wind_intensity: 0.0      
-    sun_azimuth_angle: 45.0    
-    sun_altitude_angle: 20.0   
-    fog_density: 0.0        
-    fog_distance: 1000.0       
-    fog_falloff: 0.0       
+    cloudiness: 0.0               # Brak chmur na niebie
+    precipitation: 0.0            # Brak opadów
+    precipitation_deposits: 0.0   # Brak śladów po opadach
+    wind_intensity: 0.0           # Brak wiatru
+    sun_azimuth_angle: 90.0       # Kąt azymutu słońca (położenie na niebie; zmienia wschód/zachód słońca)
+    sun_altitude_angle: 75.0      # Wysokość słońca na niebie (im wyższe, tym jaśniej)
+    fog_density: 0.0              # Brak mgły
+    fog_distance: 1000.0          # Widoczność na duże odległości
+    fog_falloff: 0.0              # Mgła nie opada
 
 vehicle:
   blueprint: 'vehicle.tesla.model3'
-  autopilot: False 
+  autopilot: True 
 
 camera:
   image_size_x: 800
@@ -34,7 +44,8 @@ camera:
     roll: 0.0
 
 lane_detection:
-  ckpt_path: 'C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\checkpoints\\ckpt_2024-11-21_22-03-46_epoch-40.pth'
+  ckpt_path: C:\Users\wojte\Lane_Detection-An_Instance_Segmentation_Approach\data\check_point\ckpt_2024-12-06_08-27-33_dotrenowanie_carla\ckpt_2024-12-06_08-27-33_epoch-100.pth
+  # ckpt_path: 'C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\checkpoints\\ckpt_2024-11-21_22-03-46_epoch-40.pth'
   arch: 'enet'
   dual_decoder: True
 
