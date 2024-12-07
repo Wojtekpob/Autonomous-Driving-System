@@ -3,12 +3,13 @@ import torch
 import cv2
 import numpy as np
 from model import lanenet
-from model.utils import cluster_embed, fit_lanes, sample_from_curve, get_color
+from model.utils import get_color
 from torchvision import transforms
 import warnings
+from collections import deque
 
 class LaneDetectionModule:
-    def __init__(self, ckpt_path, arch='enet', dual_decoder=False, device=None):
+    def __init__(self, ckpt_path, arch='enet', dual_decoder=False, device=None, history_length=5):
         """
         Initializes the Lane Detection Module.
 
@@ -16,6 +17,7 @@ class LaneDetectionModule:
         :param arch: Architecture of the network (default 'enet').
         :param dual_decoder: Whether to use dual decoder architecture.
         :param device: Device to run the model on ('cuda' or 'cpu').
+        :param history_length: Number of past predictions to keep for smoothing.
         """
         self.ckpt_path = ckpt_path
         self.arch = arch
@@ -23,6 +25,9 @@ class LaneDetectionModule:
         self.device = device if device is not None else torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.mean = np.array([103.939, 116.779, 123.68])
         self.size = (512, 288)
+        self.history_length = history_length
+        self.left_lane_history = deque(maxlen=self.history_length)
+        self.right_lane_history = deque(maxlen=self.history_length)
         self._load_model()
 
     def _load_model(self):
@@ -62,12 +67,42 @@ class LaneDetectionModule:
         image_tensor = torch.from_numpy(image).float() / 255.0
         return image_tensor
 
+    def pad_polynomial(self, coeffs, target_degree=2):
+        """
+        Pads the polynomial coefficients with zeros to match the target degree.
+
+        :param coeffs: Polynomial coefficients (highest degree first).
+        :param target_degree: The degree to pad to.
+        :return: Padded polynomial coefficients.
+        """
+        current_degree = len(coeffs) - 1
+        if current_degree < target_degree:
+            padding = np.zeros(target_degree - current_degree)
+            padded_coeffs = np.concatenate((padding, coeffs))
+            return padded_coeffs
+        return coeffs
+
+    def average_polynomials(self, polynomials):
+        """
+        Averages a list of polynomials.
+
+        :param polynomials: List of polynomial coefficients arrays.
+        :return: Averaged polynomial coefficients.
+        """
+        if not polynomials:
+            return None
+        max_degree = max(len(p) for p in polynomials) - 1
+        padded_polys = [self.pad_polynomial(p, target_degree=max_degree) for p in polynomials]
+        avg_poly = np.mean(padded_polys, axis=0)
+        return avg_poly
+
     def predict(self, image):
         """
-        Performs lane detection on the input image.
+        Performs lane detection on the input image, fits polynomials to the two lanes closest to the vehicle center,
+        and smooths them using historical data.
 
         :param image: Input image as a NumPy array (BGR format).
-        :return: Tuple of (predicted lane mask, selected polynomial coefficients).
+        :return: Tuple of (predicted lane mask visualization, selected polynomial coefficients).
         """
         input_tensor = self.preprocess_image(image)
         input_batch = input_tensor.unsqueeze(0).to(self.device)
@@ -79,46 +114,19 @@ class LaneDetectionModule:
 
         pred_bin = pred_bin_batch[0, 0].cpu().numpy().astype(np.uint8)
 
-        refined_pred_bin, selected_params = self._refine_and_select_lanes(pred_bin, w, h)
-
-        pred_mask = np.zeros((h, w, 3), dtype=np.uint8)
-        for idx, coeffs in enumerate(selected_params):
-            y_vals = np.linspace(0, h - 1, num=h)
-            x_vals = np.polyval(coeffs, y_vals)
-            pts = np.vstack((x_vals, y_vals)).T
-            pts = pts[(pts[:, 0] >= 0) & (pts[:, 0] < w)]
-            pts = pts.astype(np.int32)
-            pts = pts.reshape((-1, 1, 2))
-            color = get_color(idx)
-            cv2.polylines(pred_mask, [pts], False, color, thickness=2)
-
-        return pred_mask, selected_params
-
-    def _refine_and_select_lanes(self, pred_bin, w, h):
-        """
-        Refines the binary prediction mask by selecting the left and right lanes
-        closest to the middle and setting the rest as background.
-
-        :param pred_bin: Binary prediction mask as a NumPy array.
-        :param w: Width of the image.
-        :param h: Height of the image.
-        :return: Refined binary mask and list of polynomial coefficients for the selected lanes.
-        """
-        center_x = w / 2
-
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pred_bin, connectivity=8)
 
-        min_area = 500 
+        center_x = w / 2
+        min_area = 500
         lanes_info = []
 
-        for label in range(1, num_labels): 
-            mask = labels == label
+        for label in range(1, num_labels):
+            mask = (labels == label)
             area = stats[label, cv2.CC_STAT_AREA]
             if area < min_area:
                 continue
 
             y_coords, x_coords = np.where(mask)
-
             if len(y_coords) < 2:
                 continue
 
@@ -133,32 +141,39 @@ class LaneDetectionModule:
             x_bottom = np.polyval(coeffs, y_bottom)
             distance_from_center = x_bottom - center_x
 
-            lanes_info.append((distance_from_center, label, coeffs))
+            lanes_info.append((distance_from_center, coeffs))
 
-        left_lanes = [info for info in lanes_info if info[0] < 0]
-        right_lanes = [info for info in lanes_info if info[0] >= 0]
+        lanes_info.sort(key=lambda x: abs(x[0]))
 
-        if left_lanes:
-            left_lane = max(left_lanes, key=lambda x: x[0])
-        else:
-            left_lane = None
+        left_lane = None
+        right_lane = None
+        for dist, coeffs in lanes_info:
+            if dist < 0 and left_lane is None:
+                left_lane = coeffs
+            elif dist >= 0 and right_lane is None:
+                right_lane = coeffs
+            if left_lane is not None and right_lane is not None:
+                break
 
-        if right_lanes:
-            right_lane = min(right_lanes, key=lambda x: x[0])
-        else:
-            right_lane = None
-
-        refined_pred_bin = np.zeros_like(pred_bin)
         selected_params = []
+        if left_lane is not None:
+            self.left_lane_history.append(left_lane)
+            averaged_left = self.average_polynomials(list(self.left_lane_history))
+            selected_params.append(averaged_left)
+        if right_lane is not None:
+            self.right_lane_history.append(right_lane)
+            averaged_right = self.average_polynomials(list(self.right_lane_history))
+            selected_params.append(averaged_right)
 
-        if left_lane:
-            label = left_lane[1]
-            refined_pred_bin[labels == label] = 1
-            selected_params.append(left_lane[2])
+        pred_mask = np.zeros((h, w, 3), dtype=np.uint8)
+        for idx, coeffs in enumerate(selected_params):
+            y_vals = np.linspace(0, h - 1, num=h)
+            x_vals = np.polyval(coeffs, y_vals)
+            pts = np.vstack((x_vals, y_vals)).T
+            pts = pts[(pts[:, 0] >= 0) & (pts[:, 0] < w)]
+            pts = pts.astype(np.int32)
+            pts = pts.reshape((-1, 1, 2))
+            color = get_color(idx)
+            cv2.polylines(pred_mask, [pts], False, color, thickness=2)
 
-        if right_lane:
-            label = right_lane[1]
-            refined_pred_bin[labels == label] = 1
-            selected_params.append(right_lane[2])
-
-        return refined_pred_bin, selected_params
+        return pred_mask, selected_params

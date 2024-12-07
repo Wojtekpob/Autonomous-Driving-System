@@ -63,6 +63,19 @@ class VisualizationModule:
             points = points.astype(np.int32)
             cv2.polylines(combined_img, [points], isClosed=False, color=(0, 0, 255), thickness=5)
 
+        center_x = image.shape[1] // 2
+        bottom_y = image.shape[0] - 10 
+        offset = 20 
+
+        pt1 = (center_x - offset, bottom_y - offset)  
+        pt2 = (center_x + offset, bottom_y + offset) 
+        pt3 = (center_x - offset, bottom_y + offset) 
+        pt4 = (center_x + offset, bottom_y - offset)  
+
+        cv2.line(combined_img, pt1, pt2, (255, 0, 0), 5)  
+        cv2.line(combined_img, pt3, pt4, (255, 0, 0), 5) 
+
+
         if show:
             cv2.imshow('Visualization', combined_img)
             cv2.waitKey(1)

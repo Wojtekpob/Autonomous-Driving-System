@@ -26,7 +26,7 @@ carla:
 
 vehicle:
   blueprint: 'vehicle.tesla.model3'
-  autopilot: True 
+  autopilot: False 
 
 camera:
   image_size_x: 800
@@ -44,7 +44,7 @@ camera:
     roll: 0.0
 
 lane_detection:
-  ckpt_path: C:\Users\wojte\Lane_Detection-An_Instance_Segmentation_Approach\data\check_point\ckpt_2024-12-06_08-27-33_dotrenowanie_carla\ckpt_2024-12-06_08-27-33_epoch-100.pth
+  ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_11-11-05_fresh_tusimple_dotrenowanie_town04v2\\ckpt_2024-12-07_11-11-05_epoch-20.pth"
   # ckpt_path: 'C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\checkpoints\\ckpt_2024-11-21_22-03-46_epoch-40.pth'
   arch: 'enet'
   dual_decoder: True

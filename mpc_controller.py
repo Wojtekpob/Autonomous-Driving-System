@@ -83,7 +83,7 @@ class MPCController:
             a_t = a[t]
 
             f0 = coeffs[0] + coeffs[1] * x0_t + coeffs[2] * x0_t ** 2
-            psides0 = np.arctan(coeffs[1] + 2 * coeffs[2] * x0_t)
+            psides0 = atan(coeffs[1] + 2 * coeffs[2] * x0_t)
 
             constraints += [x1 - (x0_t + v0_t * cos(psi0_t) * dt)]
             constraints += [y1 - (y0_t + v0_t * sin(psi0_t) * dt)]
