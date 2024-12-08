@@ -145,8 +145,8 @@ class CarlaClient:
                 return
         self._last_image_time = current_time
 
-        image_filename = os.path.join(self.image_save_path, f'{image.frame:06d}.jpg')
-        image.save_to_disk(image_filename)
+        # image_filename = os.path.join(self.image_save_path, f'{image.frame:06d}.jpg')
+        # image.save_to_disk(image_filename)
 
         if self.camera_callback is not None:
             self.camera_callback(image)

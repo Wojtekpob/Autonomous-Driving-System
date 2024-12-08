@@ -136,5 +136,5 @@ class MPCController:
 
         delta_opt = sol_values[6 * N]  
         a_opt = sol_values[6 * N + (N - 1)]
-        a_opt = 0.15
+        # a_opt = 0.15
         return delta_opt, a_opt
