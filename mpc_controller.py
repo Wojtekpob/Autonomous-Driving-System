@@ -1,5 +1,5 @@
 import numpy as np
-from casadi import *
+from casadi import SX, vertcat, nlpsol, atan
 
 class MPCController:
     def __init__(self, N=10, dt=0.1, Lf=2.67):
@@ -19,7 +19,8 @@ class MPCController:
         Solves the MPC optimization problem.
 
         :param state: Current state [x, y, psi, v, cte, epsi]
-        :param coeffs: Coefficients of the desired trajectory polynomial (degree 2).
+        :param coeffs: Quadratic polynomial coefficients in vehicle coords in descending order [b2, b1, b0]
+                       representing y_v(x_v) = b2*x_v² + b1*x_v + b0.
         :return: Optimal steering angle (delta) and throttle (a).
         """
         N = self.N
@@ -46,7 +47,7 @@ class MPCController:
         for t in range(N):
             cost += 2000 * (cte[t] ** 2)
             cost += 2000 * (epsi[t] ** 2)
-            cost += (v[t] - 15) ** 2 
+            cost += (v[t] - 15) ** 2
 
         for t in range(N - 1):
             cost += 5 * (delta[t] ** 2)
@@ -65,6 +66,10 @@ class MPCController:
         constraints += [cte[0] - cte0]
         constraints += [epsi[0] - epsi0]
 
+        b2 = coeffs[0]
+        b1 = coeffs[1]
+        b0 = coeffs[2]
+
         for t in range(N - 1):
             x1 = x[t + 1]
             y1 = y[t + 1]
@@ -82,19 +87,17 @@ class MPCController:
             delta_t = delta[t]
             a_t = a[t]
 
-            f0 = coeffs[0] + coeffs[1] * x0_t + coeffs[2] * x0_t ** 2
-            psides0 = atan(coeffs[1] + 2 * coeffs[2] * x0_t)
+            f0 = b2 * x0_t**2 + b1 * x0_t + b0
+            psides0 = atan(2 * b2 * x0_t + b1)
 
-            constraints += [x1 - (x0_t + v0_t * cos(psi0_t) * dt)]
-            constraints += [y1 - (y0_t + v0_t * sin(psi0_t) * dt)]
+            constraints += [x1 - (x0_t + v0_t * np.cos(psi0_t) * dt)]
+            constraints += [y1 - (y0_t + v0_t * np.sin(psi0_t) * dt)]
             constraints += [psi1 - (psi0_t + v0_t * delta_t / Lf * dt)]
             constraints += [v1 - (v0_t + a_t * dt)]
-            constraints += [cte1 - ((f0 - y0_t) + v0_t * sin(epsi0_t) * dt)]
+            constraints += [cte1 - ((f0 - y0_t) + v0_t * np.sin(epsi0_t) * dt)]
             constraints += [epsi1 - ((psi0_t - psides0) + v0_t * delta_t / Lf * dt)]
 
-        opt_vars = vertcat(
-            x, y, psi, v, cte, epsi, delta, a
-        )
+        opt_vars = vertcat(x, y, psi, v, cte, epsi, delta, a)
 
         n_vars = opt_vars.size()[0]
         lbx = np.full(n_vars, -1e20)
@@ -102,13 +105,13 @@ class MPCController:
 
         steer_start = 6 * N
         steer_end = 6 * N + (N - 1)
-        lbx[steer_start:steer_end] = -0.436332  
-        ubx[steer_start:steer_end] = 0.436332  
+        lbx[steer_start:steer_end] = -0.436332
+        ubx[steer_start:steer_end] = 0.436332
 
         throttle_start = steer_end
         throttle_end = throttle_start + (N - 1)
-        lbx[throttle_start:throttle_end] = -1.0 
-        ubx[throttle_start:throttle_end] = 1.0  
+        lbx[throttle_start:throttle_end] = -1.0
+        ubx[throttle_start:throttle_end] = 1.0
 
         lbg = np.zeros(len(constraints))
         ubg = np.zeros(len(constraints))
@@ -134,7 +137,7 @@ class MPCController:
 
         sol_values = sol['x'].full().flatten()
 
-        delta_opt = sol_values[6 * N]  
+        delta_opt = sol_values[6 * N]
         a_opt = sol_values[6 * N + (N - 1)]
-        # a_opt = 0.15
+
         return delta_opt, a_opt

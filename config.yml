@@ -26,7 +26,7 @@ carla:
 
 vehicle:
   blueprint: 'vehicle.tesla.model3'
-  autopilot: False 
+  autopilot: True 
 
 camera:
   image_size_x: 800

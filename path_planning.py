@@ -1,103 +1,112 @@
 import numpy as np
-from math import comb
 
 class PathPlanningModule:
     def __init__(self, order=3, image_size=(512, 288)):
         """
-        Initializes the path planning module.
+        Initializes the PathPlanningModule.
 
-        :param order: Base degree of the polynomial to fit to the trajectory.
-        :param image_size: (width, height)
+        Args:
+            order (int, optional): Base degree of the polynomial to fit to the trajectory.
+                                   Defaults to 3.
+            image_size (tuple, optional): Tuple representing (width, height) of the image.
+                                          Defaults to (512, 288).
         """
         self.order = order
         self.image_size = image_size
 
     def transform_to_vehicle_coords(self, image_coeffs):
         """
-        Transform a polynomial from image coords (x_img(y_img)) to vehicle coords (y_v(x_v)).
+        Transforms a second-degree polynomial from image coordinates to vehicle coordinates.
 
-        Image Coordinate System:
-        - Origin: (0,0) top-left
-        - x-axis: to the right
-        - y-axis: downward
+        The polynomial in image coordinates is defined as:
+            x_img(y_img) = a2 * y_img² + a1 * y_img + a0
 
-        Vehicle Coordinate System:
-        - Origin: corresponds to (x_img=256, y_img=287) in image coordinates
-        - x_v-axis: upward relative to image (x_v = 287 - y_img)
-        - y_v-axis: to the right relative to image (y_v = x_img - 256)
+        **Image Coordinate System:**
+            - Origin: (0, 0) at the top-left corner.
+            - X-axis: Points to the right.
+            - Y-axis: Points downward.
 
-        Given:
-        x_img(y_img) = a_n*y_img^n + a_(n-1)*y_img^(n-1) + ... + a_0
-        Substitute y_img = 287 - x_v:
-        x_img(x_v) = sum over i of a_(n-i)*(287 - x_v)^i
+        **Vehicle Coordinate System:**
+            - Origin: Corresponds to (x_img=256, y_img=287) in image coordinates.
+            - X_v-axis: Points upward (x_v = 287 - y_img).
+            - Y_v-axis: Points to the right (y_v = x_img - 256).
 
-        Expand (287 - x_v)^i = sum_{k=0}^i [C(i,k)*287^(i-k)*(-1)^k * x_v^k]
+        Args:
+            image_coeffs (array-like): Coefficients of the polynomial in image coordinates
 
-        Collect terms by powers of x_v to get x_img in terms of x_v.
-        Then shift by -256 to get y_v:
-        y_v(x_v) = x_img(x_v) - 256
-
-        Returns coefficients [b_n, b_(n-1), ..., b_0] of y_v(x_v).
+        Returns:
+            numpy.ndarray: Coefficients of the polynomial in vehicle coordinates,
+                           ordered as [b2, b1, b0].
         """
         if len(image_coeffs) < 3:
             image_coeffs = np.pad(image_coeffs, (3 - len(image_coeffs), 0), 'constant')
 
-        n = len(image_coeffs) - 1
-        vehicle_coeffs_asc = np.zeros(n+1)
+        a2, a1, a0 = image_coeffs[:3]
 
-        for j, a_j in enumerate(image_coeffs):
-            p = n - j
-            for k in range(p+1):
-                term = a_j * comb(p, k) * (287**(p-k)) * ((-1)**k)
-                vehicle_coeffs_asc[k] += term
+        b2 = a2
+        b1 = -(a1 + 2 * 287 * a2)
+        b0 = a0 + a1 * 287 + a2 * (287 ** 2) - 256
 
-        vehicle_coeffs_asc[0] -= 256
-        vehicle_coeffs = vehicle_coeffs_asc[::-1]
-        return vehicle_coeffs
+        return np.array([b2, b1, b0])
 
     def calculate_errors(self, car_coeffs):
         """
-        Calculate CTE and EPSI in vehicle coordinates.
+        Calculates the Cross-Track Error (CTE) and Orientation Error (EPSI) for a
+        second-degree polynomial in vehicle coordinates.
 
-        Given a polynomial in vehicle coords:
-        y_v = b_n*x_v^n + ... + b_1*x_v + b_0
+        Given the polynomial in vehicle coordinates:
+            y_v = b2 * x_v² + b1 * x_v + b0
 
-        At x_v=0:
-        - y_v(0) = b_0
-        - derivative dy_v/dx_v at 0 = b_1
+        At x_v = 0:
+            - CTE (Cross-Track Error) is the value of y_v at x_v = 0:
+                cte = y_v(0) = b0
+            - EPSI (Orientation Error) is the difference between the vehicle's
+              orientation and the desired orientation based on the polynomial's slope:
+                psides = arctan(b1)
+                epsi = -psides
 
-        cte = b_0
-        psides = arctan(b_1)
-        epsi = -psides
+        Args:
+            car_coeffs (array-like): Coefficients of the polynomial in vehicle coordinates,
+                                     ordered as [b2, b1, b0].
+
+        Returns:
+            tuple:
+                float: Cross-Track Error (cte).
+                float: Orientation Error (epsi).
         """
-        b0 = car_coeffs[-1]
-        b1 = car_coeffs[-2] if len(car_coeffs) > 1 else 0.0
+        b2, b1, b0 = car_coeffs[:3]
+
         cte = b0
         psides = np.arctan(b1)
         epsi = -psides
-        return cte, epsi
 
-    def fit_polynomial(self, y_points, x_points, base_order):
-        """
-        Fits a polynomial to the provided points.
-        Returns coefficients in descending order (like np.polyfit).
-        """
-        max_order = base_order + 2
-        for order in range(base_order, max_order+1):
-            try:
-                coeffs = np.polyfit(y_points, x_points, order)
-                return coeffs
-            except np.RankWarning:
-                continue
-        return np.polyfit(y_points, x_points, max_order)
+        return cte, epsi
 
     def plan_path(self, lane_polynomials, vehicle_state):
         """
-        1. Sample points between lanes -> x_mid
-        2. Ensure (y=0,x=256) is included or polynomial passes through (y=287,x=256)
-        3. Fit polynomial in image coords
-        4. Transform to vehicle coords
-        5. Compute cte, epsi from car_coeffs
+        Plans a path by fitting a second-degree polynomial in image coordinates,
+        transforming it to vehicle coordinates, and computing CTE and EPSI.
+
+        Steps:
+            1. Sample points between the lane polynomials.
+            2. Fit a second-degree polynomial: x_img(y_img) = a2*y_img² + a1*y_img + a0.
+            3. Transform to vehicle coordinates to get y_v(x_v).
+            4. Compute cte and epsi from the resulting polynomial.
+
+        Args:
+            lane_polynomials (list of array-like): List containing polynomial coefficients for lane lines.
+                                                  Each element should be an array-like object with
+                                                  coefficients [a2, a1, a0].
+            vehicle_state (array-like): Current state of the vehicle.
+
+        Returns:
+            tuple:
+                numpy.ndarray or None: Coefficients of the fitted polynomial in image coordinates,
+                                        ordered as [a2, a1, a0].
+                float or None: Cross-Track Error (cte).
+                float or None: Orientation Error (epsi).
+                numpy.ndarray or None: Coefficients of the polynomial in vehicle coordinates,
+                                       ordered as [b2, b1, b0].
         """
         if lane_polynomials is None or len(lane_polynomials) == 0:
             print("No lane polynomials provided.")
@@ -131,8 +140,10 @@ class PathPlanningModule:
         for i in range(-num_end_points, 0):
             x_mid_points[i] = w / 2
 
-        image_coeffs = self.fit_polynomial(y_vals, x_mid_points, self.order)
-        car_coeffs = self.transform_to_vehicle_coords(image_coeffs)
+        coeffs = np.polyfit(y_vals, x_mid_points, 2)
+
+        car_coeffs = self.transform_to_vehicle_coords(coeffs)
+
         cte, epsi = self.calculate_errors(car_coeffs)
 
-        return image_coeffs, cte, epsi, car_coeffs
+        return coeffs, cte, epsi, car_coeffs
