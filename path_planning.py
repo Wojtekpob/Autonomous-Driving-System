@@ -121,7 +121,7 @@ class PathPlanningModule:
             lane_poly_left = lane_polynomials[0]
             lane_poly_right = lane_polynomials[1]
 
-        num_end_points = 4
+        num_end_points = 500
         num_samples = 10
 
         y_vals = np.concatenate([

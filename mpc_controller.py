@@ -2,7 +2,7 @@ import numpy as np
 from casadi import SX, vertcat, nlpsol, atan
 
 class MPCController:
-    def __init__(self, N=10, dt=0.1, Lf=2.67):
+    def __init__(self, N=15, dt=0.1, Lf=2.67):
         """
         Initializes the MPC controller.
 
@@ -23,6 +23,7 @@ class MPCController:
                        representing y_v(x_v) = b2*x_v² + b1*x_v + b0.
         :return: Optimal steering angle (delta) and throttle (a).
         """
+        print("coeffs: ", coeffs)
         N = self.N
         dt = self.dt
         Lf = self.Lf
@@ -45,16 +46,16 @@ class MPCController:
 
         cost = 0
         for t in range(N):
-            cost += 2000 * (cte[t] ** 2)
-            cost += 2000 * (epsi[t] ** 2)
-            cost += (v[t] - 15) ** 2
+            cost += 500 * (cte[t] ** 2)   
+            cost += 500 * (epsi[t] ** 2) 
+            cost += (v[t] - 3) ** 2  
 
         for t in range(N - 1):
             cost += 5 * (delta[t] ** 2)
-            cost += 5 * (a[t] ** 2)
+            cost += 5 * (a[t] ** 2)      
 
         for t in range(N - 2):
-            cost += 200 * ((delta[t + 1] - delta[t]) ** 2)
+            cost += 100 * ((delta[t + 1] - delta[t]) ** 2) 
             cost += 10 * ((a[t + 1] - a[t]) ** 2)
 
         constraints = []
@@ -139,5 +140,4 @@ class MPCController:
 
         delta_opt = sol_values[6 * N]
         a_opt = sol_values[6 * N + (N - 1)]
-
         return delta_opt, a_opt

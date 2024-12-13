@@ -91,7 +91,6 @@ class CarlaClient:
 
         if not os.path.exists(self.image_save_path):
             os.makedirs(self.image_save_path)
-        self.apply_control(0.0, 0.2)
 
     def set_weather_for_lane_visibility(self):
         """
