@@ -2,17 +2,19 @@ import numpy as np
 from casadi import SX, vertcat, nlpsol, atan
 
 class MPCController:
-    def __init__(self, N=15, dt=0.1, Lf=2.67):
+    def __init__(self, N=5, dt=0.1, Lf=2.0, desired_speed=10.0):
         """
         Initializes the MPC controller.
 
         :param N: Prediction horizon.
         :param dt: Time step duration.
         :param Lf: Distance between the center of mass of the vehicle and the front axle.
+        :param desired_speed: Desired speed in m/s.
         """
         self.N = N
         self.dt = dt
         self.Lf = Lf
+        self.desired_speed = desired_speed  # Żądana prędkość
 
     def solve(self, state, coeffs):
         """
@@ -27,13 +29,9 @@ class MPCController:
         N = self.N
         dt = self.dt
         Lf = self.Lf
+        desired_speed = self.desired_speed
 
-        x0 = state[0]
-        y0 = state[1]
-        psi0 = state[2]
-        v0 = state[3]
-        cte0 = state[4]
-        epsi0 = state[5]
+        x0, y0, psi0, v0, cte0, epsi0 = state
 
         x = SX.sym('x', N)
         y = SX.sym('y', N)
@@ -46,17 +44,17 @@ class MPCController:
 
         cost = 0
         for t in range(N):
-            cost += 500 * (cte[t] ** 2)   
-            cost += 500 * (epsi[t] ** 2) 
-            cost += (v[t] - 3) ** 2  
+            cost += 200 * (cte[t] ** 2)   
+            cost += 200 * (epsi[t] ** 2) 
+            cost += 2 * (v[t] - desired_speed) ** 2 
 
         for t in range(N - 1):
-            cost += 5 * (delta[t] ** 2)
-            cost += 5 * (a[t] ** 2)      
+            cost += 1500 * (delta[t] ** 2) 
+            cost += 10 * (a[t] ** 2)      
 
         for t in range(N - 2):
-            cost += 100 * ((delta[t + 1] - delta[t]) ** 2) 
-            cost += 10 * ((a[t + 1] - a[t]) ** 2)
+            cost += 1500 * ((delta[t + 1] - delta[t]) ** 2) 
+            cost += 30 * ((a[t + 1] - a[t]) ** 2)
 
         constraints = []
 
@@ -67,9 +65,7 @@ class MPCController:
         constraints += [cte[0] - cte0]
         constraints += [epsi[0] - epsi0]
 
-        b2 = coeffs[0]
-        b1 = coeffs[1]
-        b0 = coeffs[2]
+        b2, b1, b0 = coeffs
 
         for t in range(N - 1):
             x1 = x[t + 1]
@@ -106,13 +102,41 @@ class MPCController:
 
         steer_start = 6 * N
         steer_end = 6 * N + (N - 1)
-        lbx[steer_start:steer_end] = -0.436332
-        ubx[steer_start:steer_end] = 0.436332
+        lbx[steer_start:steer_end] = -0.436332  
+        ubx[steer_start:steer_end] = 0.436332 
 
         throttle_start = steer_end
         throttle_end = throttle_start + (N - 1)
-        lbx[throttle_start:throttle_end] = -1.0
-        ubx[throttle_start:throttle_end] = 1.0
+        lbx[throttle_start:throttle_end] = -1.0 
+        ubx[throttle_start:throttle_end] = 1.0 
+
+        v_start = 3 * N
+        v_end = 4 * N
+        lbx[v_start:v_end] = 0.0  
+
+        max_speed = 30.0
+        ubx[v_start:v_end] = max_speed  
+
+        max_delta_change = 0.05  
+        for t in range(N - 2):
+            constraints += [delta[t + 1] - delta[t] <= max_delta_change]
+            constraints += [delta[t + 1] - delta[t] >= -max_delta_change]
+
+        opt_vars = vertcat(x, y, psi, v, cte, epsi, delta, a)
+
+        n_vars = opt_vars.size()[0]
+        lbx = np.full(n_vars, -1e20)
+        ubx = np.full(n_vars, 1e20)
+
+        throttle_start = steer_end
+        throttle_end = throttle_start + (N - 1)
+        lbx[throttle_start:throttle_end] = -1.0 
+        ubx[throttle_start:throttle_end] = 1.0 
+
+        v_start = 3 * N
+        v_end = 4 * N
+        lbx[v_start:v_end] = 0.0 
+        ubx[v_start:v_end] = max_speed 
 
         lbg = np.zeros(len(constraints))
         ubg = np.zeros(len(constraints))
@@ -138,6 +162,6 @@ class MPCController:
 
         sol_values = sol['x'].full().flatten()
 
-        delta_opt = sol_values[6 * N]
-        a_opt = sol_values[6 * N + (N - 1)]
+        delta_opt = sol_values[steer_start]
+        a_opt = sol_values[throttle_start]
         return delta_opt, a_opt
