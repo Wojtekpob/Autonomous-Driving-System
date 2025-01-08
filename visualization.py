@@ -31,7 +31,7 @@ class VisualizationModule:
         if lane_mask_rgb.shape != image.shape:
             lane_mask_rgb = cv2.resize(lane_mask_rgb, (image.shape[1], image.shape[0]))
 
-        combined_img = cv2.addWeighted(image, 1.0, lane_mask_rgb, 0.5, 0)
+        combined_img = combined_img = image.copy()
 
         h_small, w_small = self.image_size[1], self.image_size[0]
         x_scale = image.shape[1] / w_small
@@ -61,46 +61,46 @@ class VisualizationModule:
             points[:, 0] = np.clip(points[:, 0], 0, image.shape[1] - 1)
             points[:, 1] = np.clip(points[:, 1], 0, image.shape[0] - 1)
             points = points.astype(np.int32)
-            cv2.polylines(combined_img, [points], isClosed=False, color=(0, 0, 255), thickness=5)
+            cv2.polylines(combined_img, [points], isClosed=False, color=(0, 0, 255), thickness=3)
 
-        center_x = self.image_size[0] * x_scale / 2
-        bottom_y = self.image_size[1] * y_scale - 10 
-        offset = 20 
+        # center_x = self.image_size[0] * x_scale / 2
+        # bottom_y = self.image_size[1] * y_scale - 10 
+        # offset = 20 
 
-        pt1 = (int(center_x - offset), int(bottom_y - offset))  
-        pt2 = (int(center_x + offset), int(bottom_y + offset)) 
-        pt3 = (int(center_x - offset), int(bottom_y + offset)) 
-        pt4 = (int(center_x + offset), int(bottom_y - offset))  
+        # pt1 = (int(center_x - offset), int(bottom_y - offset))  
+        # pt2 = (int(center_x + offset), int(bottom_y + offset)) 
+        # pt3 = (int(center_x - offset), int(bottom_y + offset)) 
+        # pt4 = (int(center_x + offset), int(bottom_y - offset))  
 
-        cv2.line(combined_img, pt1, pt2, (255, 0, 0), 5)  
-        cv2.line(combined_img, pt3, pt4, (255, 0, 0), 5)  
+        # cv2.line(combined_img, pt1, pt2, (255, 0, 0), 5)  
+        # cv2.line(combined_img, pt3, pt4, (255, 0, 0), 5)  
 
-        axis_origin = (50, 50) 
-        axis_length = 50   
+        # axis_origin = (50, 50) 
+        # axis_length = 50   
 
-        cv2.arrowedLine(
-            combined_img,
-            axis_origin,
-            (axis_origin[0] + axis_length, axis_origin[1]),
-            (255, 255, 255),
-            2,
-            tipLength=0.3
-        )
+        # cv2.arrowedLine(
+        #     combined_img,
+        #     axis_origin,
+        #     (axis_origin[0] + axis_length, axis_origin[1]),
+        #     (255, 255, 255),
+        #     2,
+        #     tipLength=0.3
+        # )
 
-        cv2.arrowedLine(
-            combined_img,
-            axis_origin,
-            (axis_origin[0], axis_origin[1] + axis_length),
-            (255, 255, 255),
-            2,
-            tipLength=0.3
-        )
+        # cv2.arrowedLine(
+        #     combined_img,
+        #     axis_origin,
+        #     (axis_origin[0], axis_origin[1] + axis_length),
+        #     (255, 255, 255),
+        #     2,
+        #     tipLength=0.3
+        # )
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.7
-        thickness = 2
-        cv2.putText(combined_img, 'X', (axis_origin[0] + axis_length + 10, axis_origin[1] + 5), font, font_scale, (255, 255, 255), thickness)
-        cv2.putText(combined_img, 'Y', (axis_origin[0] - 15, axis_origin[1] + axis_length + 20), font, font_scale, (255, 255, 255), thickness)
+        # font = cv2.FONT_HERSHEY_SIMPLEX
+        # font_scale = 0.7
+        # thickness = 2
+        # cv2.putText(combined_img, 'X', (axis_origin[0] + axis_length + 10, axis_origin[1] + 5), font, font_scale, (255, 255, 255), thickness)
+        # cv2.putText(combined_img, 'Y', (axis_origin[0] - 15, axis_origin[1] + axis_length + 20), font, font_scale, (255, 255, 255), thickness)
 
         if show:
             cv2.imshow('Visualization', combined_img)

@@ -3,38 +3,25 @@ carla:
   port: 2000
   timeout: 10.0
   map: 'Town04'
-  # weather:
-  #   cloudiness: 80.0   
-  #   precipitation: 0.0    
-  #   precipitation_deposits: 0.0  
-  #   wind_intensity: 0.0      
-  #   sun_azimuth_angle: 45.0    
-  #   sun_altitude_angle: 20.0   
-  #   fog_density: 0.0        
-  #   fog_distance: 1000.0       
-  #   fog_falloff: 0.0       
   weather:
-    cloudiness: 0.0               # Brak chmur na niebie
-    precipitation: 0.0            # Brak opadów
-    precipitation_deposits: 0.0   # Brak śladów po opadach
-    wind_intensity: 0.0           # Brak wiatru
-    sun_azimuth_angle: 90.0       # Kąt azymutu słońca (położenie na niebie; zmienia wschód/zachód słońca)
-    sun_altitude_angle: 75.0      # Wysokość słońca na niebie (im wyższe, tym jaśniej)
-    fog_density: 0.0              # Brak mgły
-    fog_distance: 1000.0          # Widoczność na duże odległości
-    fog_falloff: 0.0              # Mgła nie opada
-
+    cloudiness: 0.0  
+    precipitation: 0.0  
+    precipitation_deposits: 0.0 
+    wind_intensity: 0.0   
+    sun_azimuth_angle: 90.0    
+    sun_altitude_angle: 75.0  
+    fog_density: 0.0     
+    fog_distance: 1000.0     
+    fog_falloff: 0.0 
 vehicle:
   blueprint: 'vehicle.tesla.model3'
   autopilot: False 
-
 camera:
   image_size_x: 800
   image_size_y: 600
   fov: 90
   image_save_path: 'output_images'
   sampling_time: 0.1
-
   transform:
     x: 1.0
     y: 0.0
@@ -42,12 +29,10 @@ camera:
     pitch: 0.0
     yaw: 0.0
     roll: 0.0
-
 lane_detection:
+  # ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_23-25-04_fresh_tusimple_dotrenowanie_town04v3\\ckpt_2024-12-07_23-25-04_epoch-212.pth"
   ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_11-11-05_fresh_tusimple_dotrenowanie_town04v2\\ckpt_2024-12-07_11-11-05_epoch-20.pth"
-  # ckpt_path: 'C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\checkpoints\\ckpt_2024-11-21_22-03-46_epoch-40.pth'
   arch: 'enet'
   dual_decoder: True
-
 visualization:
   show_results: True

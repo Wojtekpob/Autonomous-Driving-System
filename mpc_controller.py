@@ -14,7 +14,7 @@ class MPCController:
         self.N = N
         self.dt = dt
         self.Lf = Lf
-        self.desired_speed = desired_speed  # Żądana prędkość
+        self.desired_speed = desired_speed
 
     def solve(self, state, coeffs):
         """
