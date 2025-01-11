@@ -36,3 +36,4 @@ lane_detection:
   dual_decoder: True
 visualization:
   show_results: True
+  save_images: True
