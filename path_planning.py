@@ -27,12 +27,14 @@ class PathPlanningModule:
             - Y-axis: Points downward.
 
         **Vehicle Coordinate System:**
-            - Origin: Corresponds to (x_img=256, y_img=287) in image coordinates.
-            - X_v-axis: Points upward (x_v = 287 - y_img).
-            - Y_v-axis: Points to the right (y_v = x_img - 256).
+            - Origin: Corresponds to (x_img = w/2, y_img = h - 1) in image coordinates,
+              where w, h = self.image_size.
+            - X_v-axis: Points upward (x_v = (h - 1) - y_img).
+            - Y_v-axis: Points to the right (y_v = x_img - (w / 2)).
 
         Args:
-            image_coeffs (array-like): Coefficients of the polynomial in image coordinates
+            image_coeffs (array-like): Coefficients of the polynomial in image coordinates,
+                                       e.g. [a2, a1, a0].
 
         Returns:
             numpy.ndarray: Coefficients of the polynomial in vehicle coordinates,
@@ -43,9 +45,10 @@ class PathPlanningModule:
 
         a2, a1, a0 = image_coeffs[:3]
 
+        w, h = self.image_size
         b2 = a2
-        b1 = -(a1 + 2 * 287 * a2)
-        b0 = a0 + a1 * 287 + a2 * (287 ** 2) - 256
+        b1 = -(a1 + 2 * (h - 1) * a2)
+        b0 = a0 + a1 * (h - 1) + a2 * ((h - 1) ** 2) - (w / 2)
 
         return np.array([b2, b1, b0])
 
@@ -58,16 +61,11 @@ class PathPlanningModule:
             y_v = b2 * x_v² + b1 * x_v + b0
 
         At x_v = 0:
-            - CTE (Cross-Track Error) is the value of y_v at x_v = 0:
-                cte = y_v(0) = b0
-            - EPSI (Orientation Error) is the difference between the vehicle's
-              orientation and the desired orientation based on the polynomial's slope:
-                psides = arctan(b1)
-                epsi = -psides
+            - CTE (Cross-Track Error) is y_v(0) = b0
+            - EPSI (Orientation Error) = -(arctan(b1))
 
         Args:
-            car_coeffs (array-like): Coefficients of the polynomial in vehicle coordinates,
-                                     ordered as [b2, b1, b0].
+            car_coeffs (array-like): Coefficients [b2, b1, b0].
 
         Returns:
             tuple:
@@ -89,24 +87,22 @@ class PathPlanningModule:
 
         Steps:
             1. Sample points between the lane polynomials.
-            2. Fit a second-degree polynomial: x_img(y_img) = a2*y_img² + a1*y_img + a0.
-            3. Transform to vehicle coordinates to get y_v(x_v).
+            2. Fit a second-degree polynomial in image coords: x_img(y_img) = a2*y_img² + a1*y_img + a0.
+            3. Transform to vehicle coords.
             4. Compute cte and epsi from the resulting polynomial.
 
         Args:
-            lane_polynomials (list of array-like): List containing polynomial coefficients for lane lines.
-                                                  Each element should be an array-like object with
-                                                  coefficients [a2, a1, a0].
-            vehicle_state (array-like): Current state of the vehicle.
+            lane_polynomials (list of array-like): Polynomial coeffs for lane lines
+                                                   [a2, a1, a0].
+            vehicle_state (array-like): Current vehicle state, e.g. [x, y, psi, v, cte, epsi].
 
         Returns:
             tuple:
-                numpy.ndarray or None: Coefficients of the fitted polynomial in image coordinates,
-                                        ordered as [a2, a1, a0].
+                numpy.ndarray or None: Coeffs of the fitted polynomial in image coords,
+                                       e.g. [a2, a1, a0].
                 float or None: Cross-Track Error (cte).
                 float or None: Orientation Error (epsi).
-                numpy.ndarray or None: Coefficients of the polynomial in vehicle coordinates,
-                                       ordered as [b2, b1, b0].
+                numpy.ndarray or None: Coefficients in vehicle coords [b2, b1, b0].
         """
         if lane_polynomials is None or len(lane_polynomials) == 0:
             print("No lane polynomials provided.")
