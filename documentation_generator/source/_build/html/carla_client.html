@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>carla_client module &#8212; Lane Detection Autonomous Driving 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=359c27e9"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="autonomous_driving_system module" href="autonomous_driving_system.html" />
+    <link rel="prev" title="visualization module" href="visualization.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-carla_client">
+<span id="carla-client-module"></span><h1>carla_client module<a class="headerlink" href="#module-carla_client" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="carla_client.CarlaClient">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">carla_client.</span></span><span class="sig-name descname"><span class="pre">CarlaClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="carla_client.CarlaClient.apply_control">
+<span class="sig-name descname"><span class="pre">apply_control</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">throttle</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient.apply_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies control commands to the vehicle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>steer</strong> – Steering angle in radians.</p></li>
+<li><p><strong>throttle</strong> – Throttle value between -1.0 and 1.0.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="carla_client.CarlaClient.move_vehicle_left">
+<span class="sig-name descname"><span class="pre">move_vehicle_left</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">distance</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient.move_vehicle_left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Moves the vehicle a specified distance to the left.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>distance</strong> – Distance to move the vehicle in meters (negative for left).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="carla_client.CarlaClient.set_camera_callback">
+<span class="sig-name descname"><span class="pre">set_camera_callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callback</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient.set_camera_callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the camera callback function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>callback</strong> – Function invoked after every image from the camera.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="carla_client.CarlaClient.set_weather_for_lane_visibility">
+<span class="sig-name descname"><span class="pre">set_weather_for_lane_visibility</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient.set_weather_for_lane_visibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the weather in CARLA to ensure good lane visibility.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="carla_client.CarlaClient.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#carla_client.CarlaClient.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Frees up resources.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Lane Detection Autonomous Driving</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lane_detection.html">lane_detection module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mpc_controller.html">mpc_controller module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="path_planning.html">path_planning module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">visualization module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">carla_client module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#carla_client.CarlaClient"><code class="docutils literal notranslate"><span class="pre">CarlaClient</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="autonomous_driving_system.html">autonomous_driving_system module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="visualization.html" title="previous chapter">visualization module</a></li>
+      <li>Next: <a href="autonomous_driving_system.html" title="next chapter">autonomous_driving_system module</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2025, wpob.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/carla_client.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

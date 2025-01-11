@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>path_planning module &#8212; Lane Detection Autonomous Driving 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=039e1c02" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=359c27e9"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="visualization module" href="visualization.html" />
+    <link rel="prev" title="mpc_controller module" href="mpc_controller.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-path_planning">
+<span id="path-planning-module"></span><h1>path_planning module<a class="headerlink" href="#module-path_planning" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="path_planning.PathPlanningModule">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">path_planning.</span></span><span class="sig-name descname"><span class="pre">PathPlanningModule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(512,</span> <span class="pre">288)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#path_planning.PathPlanningModule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="path_planning.PathPlanningModule.calculate_errors">
+<span class="sig-name descname"><span class="pre">calculate_errors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">car_coeffs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#path_planning.PathPlanningModule.calculate_errors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the Cross-Track Error (CTE) and Orientation Error (EPSI) for a
+second-degree polynomial in vehicle coordinates.</p>
+<dl>
+<dt>Given the polynomial in vehicle coordinates:</dt><dd><p>y_v = b2 * x_v² + b1 * x_v + b0</p>
+</dd>
+<dt>At x_v = 0:</dt><dd><ul>
+<li><dl class="simple">
+<dt>CTE (Cross-Track Error) is the value of y_v at x_v = 0:</dt><dd><p>cte = y_v(0) = b0</p>
+</dd>
+</dl>
+</li>
+<li><p>EPSI (Orientation Error) is the difference between the vehicle’s
+orientation and the desired orientation based on the polynomial’s slope:</p>
+<blockquote>
+<div><p>psides = arctan(b1)
+epsi = -psides</p>
+</div></blockquote>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>car_coeffs</strong> (<em>array-like</em>) – Coefficients of the polynomial in vehicle coordinates,
+ordered as [b2, b1, b0].</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>float: Cross-Track Error (cte).
+float: Orientation Error (epsi).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="path_planning.PathPlanningModule.plan_path">
+<span class="sig-name descname"><span class="pre">plan_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lane_polynomials</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vehicle_state</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#path_planning.PathPlanningModule.plan_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plans a path by fitting a second-degree polynomial in image coordinates,
+transforming it to vehicle coordinates, and computing CTE and EPSI.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Sample points between the lane polynomials.</p></li>
+<li><p>Fit a second-degree polynomial: x_img(y_img) = a2*y_img² + a1*y_img + a0.</p></li>
+<li><p>Transform to vehicle coordinates to get y_v(x_v).</p></li>
+<li><p>Compute cte and epsi from the resulting polynomial.</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lane_polynomials</strong> (<em>list</em><em> of </em><em>array-like</em>) – List containing polynomial coefficients for lane lines.
+Each element should be an array-like object with
+coefficients [a2, a1, a0].</p></li>
+<li><p><strong>vehicle_state</strong> (<em>array-like</em>) – Current state of the vehicle.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>numpy.ndarray or None: Coefficients of the fitted polynomial in image coordinates,</dt><dd><p>ordered as [a2, a1, a0].</p>
+</dd>
+</dl>
+<p>float or None: Cross-Track Error (cte).
+float or None: Orientation Error (epsi).
+numpy.ndarray or None: Coefficients of the polynomial in vehicle coordinates,</p>
+<blockquote>
+<div><p>ordered as [b2, b1, b0].</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="path_planning.PathPlanningModule.transform_to_vehicle_coords">
+<span class="sig-name descname"><span class="pre">transform_to_vehicle_coords</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_coeffs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#path_planning.PathPlanningModule.transform_to_vehicle_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms a second-degree polynomial from image coordinates to vehicle coordinates.</p>
+<dl class="simple">
+<dt>The polynomial in image coordinates is defined as:</dt><dd><p>x_img(y_img) = a2 * y_img² + a1 * y_img + a0</p>
+</dd>
+<dt><strong>Image Coordinate System:</strong></dt><dd><ul class="simple">
+<li><p>Origin: (0, 0) at the top-left corner.</p></li>
+<li><p>X-axis: Points to the right.</p></li>
+<li><p>Y-axis: Points downward.</p></li>
+</ul>
+</dd>
+<dt><strong>Vehicle Coordinate System:</strong></dt><dd><ul class="simple">
+<li><p>Origin: Corresponds to (x_img=256, y_img=287) in image coordinates.</p></li>
+<li><p>X_v-axis: Points upward (x_v = 287 - y_img).</p></li>
+<li><p>Y_v-axis: Points to the right (y_v = x_img - 256).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image_coeffs</strong> (<em>array-like</em>) – Coefficients of the polynomial in image coordinates</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Coefficients of the polynomial in vehicle coordinates,</dt><dd><p>ordered as [b2, b1, b0].</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Lane Detection Autonomous Driving</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lane_detection.html">lane_detection module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mpc_controller.html">mpc_controller module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">path_planning module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#path_planning.PathPlanningModule"><code class="docutils literal notranslate"><span class="pre">PathPlanningModule</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">visualization module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="carla_client.html">carla_client module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="autonomous_driving_system.html">autonomous_driving_system module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="mpc_controller.html" title="previous chapter">mpc_controller module</a></li>
+      <li>Next: <a href="visualization.html" title="next chapter">visualization module</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2025, wpob.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/path_planning.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
