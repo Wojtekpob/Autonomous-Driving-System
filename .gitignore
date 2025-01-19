@@ -2,3 +2,4 @@ output_images/
 __pycache__/
 Carla-Lane-Detection-Dataset-Generation/
 imgs/
+mpc_data/

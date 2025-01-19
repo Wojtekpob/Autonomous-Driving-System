@@ -85,14 +85,14 @@ class AutonomousDrivingSystem:
         vehicle_state = self.get_vehicle_state()
 
         trajectory_coeffs, cte, epsi, car_coeffs = self.path_planning.plan_path(selected_params, vehicle_state)
-        print("cte, epsi, velocity", cte, epsi, vehicle_state['v'])
+        # print("cte, epsi, velocity", cte, epsi, vehicle_state['v'])
         if trajectory_coeffs is None:
             print("No sufficient data for path planning.")
             trajectory_coeffs = None
         else:
             state = np.array([0, 0, 0, vehicle_state['v'], cte, epsi])
             delta_opt, a_opt = self.mpc_controller.solve(state, car_coeffs)
-            print("delta_opt, a_opt:", delta_opt, a_opt)
+            # print("delta_opt, a_opt:", delta_opt, a_opt)
 
             if not self.config['vehicle'].get('autopilot', False):
                 self.client.apply_control(delta_opt, a_opt)

@@ -59,7 +59,7 @@ class CarlaClient:
         blueprint_library = self.world.get_blueprint_library()
 
         vehicle_bp = blueprint_library.find(self.config['vehicle']['blueprint'])
-        spawn_point = self.world.get_map().get_spawn_points()[1]
+        spawn_point = self.world.get_map().get_spawn_points()[9]
 
         self.vehicle = self.world.spawn_actor(vehicle_bp, spawn_point)
         print(f'Spawned vehicle: {self.vehicle.type_id}')
@@ -85,6 +85,7 @@ class CarlaClient:
                 roll=self.config['camera']['transform']['roll']
             )
         )
+        # self.set_weather_for_lane_visibility()
 
         self.camera = self.world.spawn_actor(camera_bp, camera_transform, attach_to=self.vehicle)
         print('Spawned camera')
