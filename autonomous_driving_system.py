@@ -3,7 +3,7 @@ import yaml
 import threading
 import numpy as np
 import cv2
-import os 
+import os
 
 from lane_detection import LaneDetectionModule
 from path_planning import PathPlanningModule
@@ -18,10 +18,9 @@ class AutonomousDrivingSystem:
 
         :param config_path: Path to the YAML configuration file.
         """
-        self.config_path = config_path  
+        self.config_path = config_path
         with open(config_path, 'r') as file:
             self.config = yaml.safe_load(file)
-
         self.client = CarlaClient(self.config)
         self.lane_detection = LaneDetectionModule(
             ckpt_path=self.config['lane_detection']['ckpt_path'],
@@ -30,22 +29,18 @@ class AutonomousDrivingSystem:
         )
         self.path_planning = PathPlanningModule(image_size=self.lane_detection.size)
         self.mpc_controller = MPCController()
-
         self.visualization = VisualizationModule(
             image_size=self.lane_detection.size
         )
-
         self.display = self.config['visualization']['show_results']
         self.save_images = self.config['visualization'].get('save_images', False)
-
         if self.save_images:
             config_dir = os.path.dirname(os.path.abspath(self.config_path))
-            images_dir_name = self.config['camera']['image_save_path'] 
+            images_dir_name = self.config['camera']['image_save_path']
             self.images_output_folder = os.path.join(config_dir, images_dir_name)
             os.makedirs(self.images_output_folder, exist_ok=True)
         else:
             self.images_output_folder = None
-
         if self.display:
             self.display_thread = threading.Thread(target=self._display_loop)
             self.display_thread.daemon = True
@@ -60,43 +55,32 @@ class AutonomousDrivingSystem:
         """
         transform = self.client.vehicle.get_transform()
         velocity = self.client.vehicle.get_velocity()
-
         x = transform.location.x
         y = transform.location.y
         psi = np.deg2rad(transform.rotation.yaw)
         v = np.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2)
-
         return {'x': x, 'y': y, 'psi': psi, 'v': v}
 
     def camera_callback(self, image):
         """
-        Function called for each image received from the camera.
-
-        :param image: Image from the camera.
+        Function called for each image received from the front camera.
         """
         image_data = np.frombuffer(image.raw_data, dtype=np.uint8)
         image_data = image_data.reshape((image.height, image.width, 4))
         image_data = image_data[:, :, :3]
         image_resized = cv2.resize(image_data, self.lane_detection.size)
-
         pred_mask_resized, selected_params = self.lane_detection.predict(image_resized)
         pred_mask = cv2.resize(pred_mask_resized, (image_data.shape[1], image_data.shape[0]))
-
         vehicle_state = self.get_vehicle_state()
-
         trajectory_coeffs, cte, epsi, car_coeffs = self.path_planning.plan_path(selected_params, vehicle_state)
-        # print("cte, epsi, velocity", cte, epsi, vehicle_state['v'])
         if trajectory_coeffs is None:
             print("No sufficient data for path planning.")
             trajectory_coeffs = None
         else:
             state = np.array([0, 0, 0, vehicle_state['v'], cte, epsi])
             delta_opt, a_opt = self.mpc_controller.solve(state, car_coeffs)
-            # print("delta_opt, a_opt:", delta_opt, a_opt)
-
             if not self.config['vehicle'].get('autopilot', False):
                 self.client.apply_control(delta_opt, a_opt)
-
         if self.display or self.save_images:
             combined_img = self.visualization.visualize(
                 image=image_data,
@@ -105,16 +89,27 @@ class AutonomousDrivingSystem:
                 lane_lines=selected_params,
                 show=False
             )
-
             if self.display:
                 with self.frame_lock:
                     self.frame_to_display = combined_img
-
             if self.save_images and self.images_output_folder is not None:
                 timestamp = time.time()
-                filename = f"frame_{timestamp:.3f}.png"
+                filename = f"{timestamp:.3f}_front.png"
                 full_path = os.path.join(self.images_output_folder, filename)
                 cv2.imwrite(full_path, combined_img)
+
+    def camera_callback_top(self, image):
+        """
+        Function called for each image received from the top camera.
+        """
+        image_data = np.frombuffer(image.raw_data, dtype=np.uint8)
+        image_data = image_data.reshape((image.height, image.width, 4))
+        image_data = image_data[:, :, :3]
+        if self.save_images and self.images_output_folder is not None:
+            timestamp = time.time()
+            filename = f"{timestamp:.3f}_top.png"
+            full_path = os.path.join(self.images_output_folder, filename)
+            cv2.imwrite(full_path, image_data)
 
     def _display_loop(self):
         """
@@ -136,10 +131,9 @@ class AutonomousDrivingSystem:
         Starts the autonomous driving system.
         """
         self.client.set_camera_callback(self.camera_callback)
-
+        self.client.set_camera_top_callback(self.camera_callback_top)
         if self.display:
             self.display_thread.start()
-
         try:
             while True:
                 time.sleep(1)
@@ -147,6 +141,7 @@ class AutonomousDrivingSystem:
             print('Stopping Autonomous Driving System...')
         finally:
             self.client.stop()
+
 
 
 if __name__ == "__main__":

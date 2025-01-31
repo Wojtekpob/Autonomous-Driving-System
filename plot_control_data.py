@@ -10,66 +10,64 @@ def plot_mpc_data(file_path, tag=None):
     :param file_path: Path to the CSV file containing control data.
     :param tag: Optional tag to add to the plot title or output file.
     """
-    time_steps = []
+    sample_indices = []  
     delta_values = []
     a_values = []
     cte_values = []
     epsi_values = []
+    v_values = []
+    desired_speed_values = []
 
     with open(file_path, mode='r') as file:
         reader = csv.DictReader(file)
-        for row in reader:
-            time_steps.append(int(row["time_step"]))
+        for idx, row in enumerate(reader):
+            sample_indices.append(idx)  # Indeks próbki
             delta_values.append(float(row["delta"]))
             a_values.append(float(row["a"]))
             cte_values.append(float(row["cte"]))
             epsi_values.append(float(row["epsi"]))
+            v_values.append(float(row["v"]))
+            desired_speed_values.append(float(row["desired_speed"]))
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(14, 12))
 
-    plot_title = f"MPC Control Data"
-    if tag:
-        plot_title += f" - {tag}"
-
-    plt.suptitle(plot_title, fontsize=16)
-
-    plt.subplot(2, 2, 1)
-    plt.plot(time_steps, delta_values, label="Delta (Steering Angle)")
-    plt.title("Steering Angle (Delta)")
-    plt.xlabel("Time Step")
+    plt.subplot(3, 2, 1)
+    plt.plot(sample_indices, delta_values, label="Delta (Kąt Skrętu)")
+    plt.title("Kąt Skrętu (Delta)")
+    plt.xlabel("Próbka")
     plt.ylabel("Delta (rad)")
     plt.grid()
     plt.legend()
 
-    plt.subplot(2, 2, 2)
-    plt.plot(time_steps, a_values, label="Throttle (a)", color="orange")
-    plt.title("Throttle (a)")
-    plt.xlabel("Time Step")
-    plt.ylabel("Throttle")
+    plt.subplot(3, 2, 2)
+    plt.plot(sample_indices, a_values, label="Przyspieszenie (a)", color="orange")
+    plt.title("Przyspieszenie (a)")
+    plt.xlabel("Próbka")
+    plt.ylabel("Przyspieszenie")
     plt.grid()
     plt.legend()
 
-    plt.subplot(2, 2, 3)
-    plt.plot(time_steps, cte_values, label="CTE (Cross-Track Error)", color="green")
-    plt.title("Cross-Track Error (CTE)")
-    plt.xlabel("Time Step")
+    plt.subplot(3, 2, 3)
+    plt.plot(sample_indices, cte_values, label="CTE", color="green")
+    plt.title("Błąd Boczny (CTE)")
+    plt.xlabel("Próbka")
     plt.ylabel("CTE")
     plt.grid()
     plt.legend()
 
-    plt.subplot(2, 2, 4)
-    plt.plot(time_steps, epsi_values, label="EPSI (Orientation Error)", color="red")
-    plt.title("Orientation Error (EPSI)")
-    plt.xlabel("Time Step")
+    plt.subplot(3, 2, 4)
+    plt.plot(sample_indices, epsi_values, label="EPSI", color="red")
+    plt.title("Błąd Orientacji (EPSI)")
+    plt.xlabel("Próbka")
     plt.ylabel("EPSI")
     plt.grid()
     plt.legend()
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.tight_layout(h_pad=2.5, rect=[0, 0, 1, 0.95])
 
     if tag:
         output_file = file_path.replace(".csv", f"_{tag}.png")
-        plt.savefig(output_file)
+        plt.savefig(output_file, bbox_inches="tight")
         print(f"Plot saved to {output_file}")
 
     plt.show()

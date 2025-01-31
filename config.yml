@@ -31,9 +31,10 @@ camera:
     roll: 0.0
 lane_detection:
   # ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_23-25-04_fresh_tusimple_dotrenowanie_town04v3\\ckpt_2024-12-07_23-25-04_epoch-212.pth"
-  ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_11-11-05_fresh_tusimple_dotrenowanie_town04v2\\ckpt_2024-12-07_11-11-05_epoch-20.pth"
-  arch: 'enet'
+  # ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2024-12-07_11-11-05_fresh_tusimple_dotrenowanie_town04v2\\ckpt_2024-12-07_11-11-05_epoch-20.pth"
+  ckpt_path: "C:\\Users\\wojte\\Lane_Detection-An_Instance_Segmentation_Approach\\data\\check_point\\ckpt_2025-01-24_09-11-21_fresh_tusimple_carla_mix_fcn_2decoder\\ckpt_2025-01-24_09-11-21_epoch-210.pth"
+  arch: 'fcn'
   dual_decoder: True
 visualization:
-  show_results: True
+  show_results: False
   save_images: True
