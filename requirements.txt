@@ -1,0 +1,8 @@
+carla
+PyYAML
+numpy
+opencv-python
+torch
+torchvision
+casadi
+scikit-learn
