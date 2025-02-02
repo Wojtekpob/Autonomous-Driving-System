@@ -36,5 +36,5 @@ lane_detection:
   arch: 'fcn'
   dual_decoder: True
 visualization:
-  show_results: False
-  save_images: True
+  show_results: True
+  save_images: False
